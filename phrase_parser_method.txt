@@ -1,0 +1,53 @@
+The idea is to use the training data as a mapping table
+where each phrase and sub-phrase is matched to a certain score.
+
+For each phrase in our test set, we will first break it apart into sub-phrases
+and match these sub-phrases to our mapping table.
+This will (ideally) result in a whole bunch of matched sub-phrases,
+each one with a corresponding sentiment score from our mapping table.
+
+Take a weighted average of all of these scores
+based on the length of the sub-phrase that was matched.
+
+
+
+# Pseudocode
+
+# First, create our mapping table
+
+
+for phrase in test_phrases:
+
+	# Split our test phrase into all possible phrases
+	split_phrase = re.split('\s', phrase)
+	possible_phrases = all possible sub-phrases
+	# for example, given the phrase 'cat is good movie',
+	# we would split this into:
+	# cat, cat is, cat is good, cat is good movie,
+	# is, is good, is good movie,
+	# good, good movie,
+	# movie
+
+	# Match all of these possible phrases with our mapping table
+	# for example, say our mapping table has the following records:
+	# cat = 2
+	# good movie = 4
+	# is good = 4
+	# good = 4
+	# is = 2
+	# cat is = 2
+	# these would be the possible sub-phrases we are left with
+
+	# In order to avoid double-counting, we may have to take out some sub-phrases
+	# example: 'cat' and 'is' are both a part of 'cat is', so we would just keep 'cat is'
+	# we are left with
+	# cat is = 2
+	# is good = 4
+	# good movie = 4
+
+	# Finally, take an average and round it
+	# (or we could just do a majority vote)
+	# average = 3.3, rounds to 3
+	# majority vote = 4
+
+# end loop
