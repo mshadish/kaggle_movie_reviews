@@ -14,8 +14,10 @@ This script defines several functions in order to
 import re
 import random
 import time
-from joblib import Parallel, delayed
-import multiprocessing
+import multiprocessing as mp
+import sys
+import numpy as np
+import argparse
 
 
 def tsvRead(tsv_file):
@@ -45,23 +47,33 @@ def tsvRead(tsv_file):
     return mapping_dict
     
     
-def splitTrainHoldout(mapping_dict, split_fraction = 0.2):
+def splitTrainHoldout(full_mapping_dict, split_fraction = 0.05):
     """
     Takes in a mapping dictionary of training data
     
     Returns a holdout set of the training data based on the split fraction
-    Also modifies (by reference) the mapping dictionary
+    Also returns a copy of the mapping dictionary
     with the remaining training data, minus the holdout set
     """
     # grab the holdout set
-    sample_fraction = int(round(split_fraction * len(mapping_dict.keys())))
-    holdout_set = random.sample(mapping_dict, sample_fraction)
+    sample_size = int(round(split_fraction * len(full_mapping_dict.keys())))
+    holdout_set = random.sample(full_mapping_dict, sample_size)
+    
+    # create a copy of the full mapping_dict
+    mapping_dict = full_mapping_dict.copy()
+    
+    """
+    # create a copy of the mapping dict for validation purposes
+    validation_mapping = {key: full_mapping_dict[key]
+                            for key in full_mapping_dict
+                            if key not in holdout_set}
+    """
     
     # remove the holdout data from the mapping dictionary
     for phrase in holdout_set:
         del mapping_dict[phrase]
         
-    return holdout_set
+    return holdout_set, mapping_dict
     
     
 def testPhraseSplit(test_phrase):
@@ -131,32 +143,259 @@ def joinWithMapping(mapping_dict, possible_phrases):
                     del match_dict[phrase_2]
                     
     # end loops
-    return_dict = {key: mapping_dict[key] for key in match_dict}
+    try:
+        return_dict = {key: mapping_dict[key] for key in match_dict}
+    except TypeError:
+        print match_dict
+        print type(mapping_dict)
+        sys.exit()
     return return_dict
     
     
-if __name__ == '__main__':
+def randomBaseline(holdout_set):
+    """
+    Assigns random scores 0-4 to our holdout set
     
-    num_cores = multiprocessing.cpu_count()
+    This can help us establish a baseline
+    """
+    # set seed
+    random.seed(time.time())
     
-    now = time.time()
-    map_dict = tsvRead('train.tsv')
-    print time.time() - now
-    now = time.time()
+    predicted_scores = {phrase: random.randint(0,4) for phrase in holdout_set}
+    
+    return predicted_scores
+    
+    
+def method1(mapping_dict, holdout_set, remove_neutrals = False):
+    """
+    Method 1:
+    Average all of the scores from the matched sub-phrases
+    for a given phrase from our holdout set
+    
+    Straight average, no weights applied
+    
+    Results: Can achieve approximately 56% to 59% accuracy
+    Increases to 60% accuracy if we simply remove all of the neutral phrases
+    """
+    # we will store our results in a dictionary
+    predicted_scores = {}
     
     count = 0
-    holdout = splitTrainHoldout(map_dict, 0.1)
-    
-    """
-    for phrase in holdout:
-        x = joinWithMapping(map_dict, testPhraseSplit(phrase))
-        print 'completed ' + str(count)
-        count += 1
+
+    for phrase in holdout_set:
         
-    print time.time() - now
-    """
+        # split into all possible phrases
+        sub_phrases = testPhraseSplit(phrase)
+        
+        # join with the mapping dictionary
+        matches = joinWithMapping(mapping_dict, sub_phrases)
+        
+        # if we want to remove neutrals, do so here
+        if remove_neutrals:
+            matches = {key: float(matches[key]) for key in matches
+                        if int(matches[key]) != 2}
+        
+        # if nothing is matched, default assignment is a neutral score
+        if len(matches) == 0:
+            predicted_scores[phrase] = 2
+            continue
+        
+        # otherwise, compute the unweighted average
+        scores = [float(num) for num in matches.values()]
+        
+        # and add to our scoring dictionary
+        predicted_scores[phrase] = int(round(np.mean(scores)))
+        
+        """
+        # to keep track of progress
+        count += 1
+        print 'completed: ' + str(count)
+        """
+                
+    return predicted_scores
     
-    func = lambda x: joinWithMapping(map_dict, testPhraseSplit(x))
-    Parallel(n_jobs = num_cores)(delayed(func)(phrase) for phrase in holdout)
+    
+def method2(mapping_dict, holdout_set, remove_neutrals = False):
+    """
+    Method 2:
+    Compute a weighted average score for each phrase
+    Weightings are calculated based on sub-phrase length
+    compared to the length of the entire phrase
+    
+    Also around 60% accuracy when we remove neutrals
+    """
+    # we will store our results in a dictionary
+    predicted_scores = {}
+    
+    count = 0
+    none_matched = 0
+    
+    for phrase in holdout_set:
+        
+        # grab the phrase length with which we will calculate our weighted avg
+        phrase_length = float(len(re.split(r'\s', phrase)))
+        
+        # split into all possible phrases
+        sub_phrases = testPhraseSplit(phrase)
+        
+        # join with the mapping dictionary
+        matches = joinWithMapping(mapping_dict, sub_phrases)
+        
+        # if we want to remove neutrals, do so here
+        if remove_neutrals:
+            matches = {key: float(matches[key]) for key in matches
+                        if int(matches[key]) != 0}
+        
+        # if nothing is matched, default assignment is a neutral score
+        if len(matches) == 0:
+            predicted_scores[phrase] = 0
+            continue
+                
+        # bag of matched phrases
+        bag_of_matches = ' '.join(matches.keys())
+        bag_size = float(len(re.split(r'\s', bag_of_matches)))
+        
+        # otherwise, compute the weighted scores
+        scores = []
+        for matched_phrase in matches:
             
-    print time.time() - now
+            # compute the length of our matched phrase
+            matched_phrase_length = float(len(re.split(r'\s', matched_phrase)))
+            
+            # grab the score for the phrase
+            num = float(matches[matched_phrase])
+
+            # weight it
+            num = num * matched_phrase_length / bag_size
+            
+            # add it to our list of scores
+            scores.append(num)
+        
+        # and add our weighted average to the scoring dictionary
+        predicted_scores[phrase] = int(round(np.sum(scores)))
+        
+        """
+        # to keep track of progress
+        count += 1
+        print 'completed: ' + str(count)
+        """
+                
+    return predicted_scores
+    
+    
+def computeAccuracy(predicted_scores, full_mapping_dict):
+    """
+    This takes in a dictionary with our predictions on a validation set
+    as well as the full dictionary
+    
+    And tests the accuracy of our predictions
+    Returns a ratio
+    """
+    # compute the numerator
+    numerator = 0.0
+    
+    # compare with the actual values
+    for phrase in predicted_scores:
+        if predicted_scores[phrase] == int(full_mapping_dict[phrase]):
+            numerator += 1
+            
+    # compute denominator
+    denominator = len(predicted_scores)
+    
+    return numerator / denominator
+    
+    
+def testingWrapper(full_map_dict, size, weighted_scores = False,
+                   remove_neutrals = False):
+    """
+    Runs a single iteration of
+    1. generating a holdout set
+    2. computing the model score
+    
+    Note: if we want weighted scores, we must shift the scores down by 2
+    such that 0 is neutral, -2 is negative, and +2 is positive
+    """
+    # if we're using weighted scoring, we must convert the dict values
+    # from strings to floats
+    if weighted_scores:
+        full_map_dict = {i: int(full_map_dict[i]) - 2 for i in full_map_dict}
+
+    holdout_set, mapping_minus_holdout = splitTrainHoldout(full_map_dict, size)
+    predictions = None
+    if weighted_scores:
+        predictions = method2(mapping_minus_holdout, holdout_set,
+                              remove_neutrals)
+    else:
+        predictions = method1(mapping_minus_holdout, holdout_set,
+                              remove_neutrals)
+    accuracy = computeAccuracy(predictions, full_map_dict)
+    
+    return accuracy
+    
+    
+def main():
+    # take in arguments
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-method",
+                        help = "method1 (unweighted avgs) or method2 (weighted)",
+                        type = str)
+    parser.add_argument("-neutrals",
+                        help = "Remove neutrals, T or F",
+                        type = str)
+    parser.add_argument('-iter',
+                        help = 'How many iterations?',
+                        type = float)
+    parser.add_argument('-size',
+                        help = 'Percent of training set aside for validation',
+                        type = float)
+
+    args = parser.parse_args()
+    
+    # check inputs
+    weight_scoring = False
+    rm_neutrals = False
+    iterations = 10.0
+    validation_size = 0.001
+    
+    if args.method == 'method2':
+        weight_scoring = True
+    
+    if args.neutrals:
+        if args.neutrals.lower() == 't':
+            rm_neutrals = True
+            
+    if args.iter:
+        iterations = args.iter
+        
+    if args.size:
+        if args.size > 0 and args.size < 1:
+            validation_size = args.size
+    
+    full_map_dict = tsvRead('train.tsv')
+    
+    now = time.time()
+    iter_count = 0
+    model_scores = []
+
+    
+    # loop to compute average accuracies
+    for i in xrange(int(iterations)):
+        model_scores.append(testingWrapper(full_map_dict,
+                                           size = validation_size,
+                                           weighted_scores = weight_scoring,
+                                           remove_neutrals = rm_neutrals))
+        iter_count += 1
+        print 'finished iteration ' + str(iter_count)
+    # end loop
+
+    
+    print 'model average over ' + str(iter_count) + ' iterations'
+    print str(np.mean(model_scores))
+    print 'average time per run: ' + str((time.time() - now)/iterations)
+    
+    return None
+    
+    
+if __name__ == '__main__':
+    main()
+    pass
