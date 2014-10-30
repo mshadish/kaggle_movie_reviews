@@ -4,6 +4,13 @@ Created on Sat Oct 25 10:33:06 2014
 
 @author: mshadish
 
+This is called via the command line as follows
+> python phrase_mapping.py -method (1 or 2) -neutrals (remove?)
+...-iter (how many iterations, e.g. 10) -holdout (between 0 and 1)
+
+Method 1: Unweighted scores used to compute phrase sentiment
+Method 2: Weighted scores used to compute phrase sentiment
+
 This script defines several functions in order to
 1. Create a "mapping" dictionary of phrases and their sentiments
 2. Break apart each incoming test phrase into all of its possible sub-phrases
@@ -12,95 +19,14 @@ This script defines several functions in order to
 """
 
 import re
-import random
 import time
-import multiprocessing as mp
-import sys
 import numpy as np
-import argparse
+from utils import tsvRead
+from utils import testPhraseSplit
+from utils import computeAccuracy
+from utils import splitTrainHoldout
+from utils import commandLineIntake
 
-
-def tsvRead(tsv_file):
-    """
-    Takes in a path to the tsv file (presumably of training data)
-    
-    Returns a mapping dictionary of training phrases to sentiment scores
-    """
-    # open the file
-    infile = open(tsv_file, 'r')
-    
-    mapping_dict = {}
-    
-    for line in infile:
-        # skip the first row
-        if re.match(r'[a-zA-Z]', line):
-            continue
-        
-        # remove newlines
-        line = re.sub('\n', '', line)
-        
-        # split into four columns
-        # and grab the 3rd (phrase) and 4th (score) columns
-        line_columns = re.split('\t', line)
-        mapping_dict[line_columns[2]] = line_columns[3]
-        
-    return mapping_dict
-    
-    
-def splitTrainHoldout(full_mapping_dict, split_fraction = 0.05):
-    """
-    Takes in a mapping dictionary of training data
-    
-    Returns a holdout set of the training data based on the split fraction
-    Also returns a copy of the mapping dictionary
-    with the remaining training data, minus the holdout set
-    """
-    # grab the holdout set
-    sample_size = int(round(split_fraction * len(full_mapping_dict.keys())))
-    holdout_set = random.sample(full_mapping_dict, sample_size)
-    
-    # create a copy of the full mapping_dict
-    mapping_dict = full_mapping_dict.copy()
-    
-    """
-    # create a copy of the mapping dict for validation purposes
-    validation_mapping = {key: full_mapping_dict[key]
-                            for key in full_mapping_dict
-                            if key not in holdout_set}
-    """
-    
-    # remove the holdout data from the mapping dictionary
-    for phrase in holdout_set:
-        del mapping_dict[phrase]
-        
-    return holdout_set, mapping_dict
-    
-    
-def testPhraseSplit(test_phrase):
-    """
-    Takes in a test phrase
-    
-    Returns a list of all of the possible sub-phrases
-    that can be made by that test_phrase
-    """
-    # split the phrase by space
-    phrase_split = re.split(r'\s', test_phrase)
-    
-    # note that we will need to keep track of the start and stop indices
-    # of each sub-phrase, so we will use those as keys in our dict
-    possible_phrases = {}
-    
-    # loop through all possible phrases
-    phrase_length = len(phrase_split)
-    
-    for start_index in xrange(phrase_length):
-        for stop_index in xrange(start_index + 1, phrase_length + 1):
-            
-            # add it to our list
-            sub_phrase = ' '.join(phrase_split[start_index:stop_index])
-            possible_phrases[sub_phrase] = (start_index, stop_index)
-            
-    return possible_phrases
     
     
 def joinWithMapping(mapping_dict, possible_phrases):
@@ -143,27 +69,9 @@ def joinWithMapping(mapping_dict, possible_phrases):
                     del match_dict[phrase_2]
                     
     # end loops
-    try:
-        return_dict = {key: mapping_dict[key] for key in match_dict}
-    except TypeError:
-        print match_dict
-        print type(mapping_dict)
-        sys.exit()
+    return_dict = {key: mapping_dict[key] for key in match_dict}
     return return_dict
-    
-    
-def randomBaseline(holdout_set):
-    """
-    Assigns random scores 0-4 to our holdout set
-    
-    This can help us establish a baseline
-    """
-    # set seed
-    random.seed(time.time())
-    
-    predicted_scores = {phrase: random.randint(0,4) for phrase in holdout_set}
-    
-    return predicted_scores
+
     
     
 def method1(mapping_dict, holdout_set, remove_neutrals = False):
@@ -180,8 +88,6 @@ def method1(mapping_dict, holdout_set, remove_neutrals = False):
     # we will store our results in a dictionary
     predicted_scores = {}
     
-    count = 0
-
     for phrase in holdout_set:
         
         # split into all possible phrases
@@ -227,13 +133,7 @@ def method2(mapping_dict, holdout_set, remove_neutrals = False):
     # we will store our results in a dictionary
     predicted_scores = {}
     
-    count = 0
-    none_matched = 0
-    
     for phrase in holdout_set:
-        
-        # grab the phrase length with which we will calculate our weighted avg
-        phrase_length = float(len(re.split(r'\s', phrase)))
         
         # split into all possible phrases
         sub_phrases = testPhraseSplit(phrase)
@@ -281,28 +181,7 @@ def method2(mapping_dict, holdout_set, remove_neutrals = False):
         """
                 
     return predicted_scores
-    
-    
-def computeAccuracy(predicted_scores, full_mapping_dict):
-    """
-    This takes in a dictionary with our predictions on a validation set
-    as well as the full dictionary
-    
-    And tests the accuracy of our predictions
-    Returns a ratio
-    """
-    # compute the numerator
-    numerator = 0.0
-    
-    # compare with the actual values
-    for phrase in predicted_scores:
-        if predicted_scores[phrase] == int(full_mapping_dict[phrase]):
-            numerator += 1
-            
-    # compute denominator
-    denominator = len(predicted_scores)
-    
-    return numerator / denominator
+
     
     
 def testingWrapper(full_map_dict, size, weighted_scores = False,
@@ -310,10 +189,7 @@ def testingWrapper(full_map_dict, size, weighted_scores = False,
     """
     Runs a single iteration of
     1. generating a holdout set
-    2. computing the model score
-    
-    Note: if we want weighted scores, we must shift the scores down by 2
-    such that 0 is neutral, -2 is negative, and +2 is positive
+    2. computing the model prediction score on the holdout set
     """
     # if we're using weighted scoring, we must convert the dict values
     # from strings to floats
@@ -332,56 +208,21 @@ def testingWrapper(full_map_dict, size, weighted_scores = False,
     
     return accuracy
     
+
     
 def main():
-    # take in arguments
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-method",
-                        help = "method1 (unweighted avgs) or method2 (weighted)",
-                        type = str)
-    parser.add_argument("-neutrals",
-                        help = "Remove neutrals, T or F",
-                        type = str)
-    parser.add_argument('-iter',
-                        help = 'How many iterations?',
-                        type = float)
-    parser.add_argument('-size',
-                        help = 'Percent of training set aside for validation',
-                        type = float)
-
-    args = parser.parse_args()
     
-    # check inputs
-    weight_scoring = False
-    rm_neutrals = False
-    iterations = 10.0
-    validation_size = 0.001
-    
-    if args.method == 'method2':
-        weight_scoring = True
-    
-    if args.neutrals:
-        if args.neutrals.lower() == 't':
-            rm_neutrals = True
-            
-    if args.iter:
-        iterations = args.iter
-        
-    if args.size:
-        if args.size > 0 and args.size < 1:
-            validation_size = args.size
-    
+    weight_scoring, rm_neutrals, iterations, holdout_size = commandLineIntake()
     full_map_dict = tsvRead('train.tsv')
     
     now = time.time()
     iter_count = 0
     model_scores = []
-
     
     # loop to compute average accuracies
     for i in xrange(int(iterations)):
         model_scores.append(testingWrapper(full_map_dict,
-                                           size = validation_size,
+                                           size = holdout_size,
                                            weighted_scores = weight_scoring,
                                            remove_neutrals = rm_neutrals))
         iter_count += 1
@@ -392,10 +233,9 @@ def main():
     print 'model average over ' + str(iter_count) + ' iterations'
     print str(np.mean(model_scores))
     print 'average time per run: ' + str((time.time() - now)/iterations)
-    
     return None
+    
     
     
 if __name__ == '__main__':
     main()
-    pass
