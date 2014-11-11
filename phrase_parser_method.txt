@@ -1,3 +1,10 @@
+Average results (15 iterations, 90-10 training-holdout split):
+Exponentially-weighted scoring: 60.8%
+1.5-power weighted scoring: 60.9%
+Un-weighted, neutrals removed: 60.5%
+Linearly-weighted, neutrals removed: 60.4%
+
+
 The idea is to use the training data as a mapping table
 where each phrase and sub-phrase is matched to a certain score.
 

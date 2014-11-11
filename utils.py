@@ -21,14 +21,26 @@ This script defines several utility functions
     
 4. computeAccuracy(predictions, full data set)
     - takes in 2 dictionaries:
-    - the 1st maps each phrase to our predicted sentiment
+    - the 1st maps each test phrase to our predicted sentiment
     - the 2nd is the full training set that maps every phrase to sentiment
+    
+5. computeOverPredict(predictions, full data set)
+    - similar to computeAccuracy
+    - except this function returns the ratio of over-guesses
+    - to the total number of predictions we got wrong
+    
+6. computeWeightedScore(list of scores, list of phrase lengths)
+    - takes in a list of matched scores
+    - and a list of corresponding phrase lengths
+    - computes a single, weighted score
 """
 
 import re
 import random
 import time
 import argparse
+import sys
+import numpy as np
 
 
 def tsvRead(tsv_file):
@@ -119,7 +131,7 @@ def computeAccuracy(predicted_scores, full_mapping_dict):
     as well as the full dictionary
     
     And tests the accuracy of our predictions
-    Returns a ratio
+    Returns the ratio of accurate predictions to total predictions
     """
     # compute the numerator
     numerator = 0.0
@@ -136,15 +148,71 @@ def computeAccuracy(predicted_scores, full_mapping_dict):
     
     
     
+def computeOverPredict(predicted_scores, full_mapping_dict):
+    """
+    Takes in a dictionary with our predictions on a validation set
+    as well as a dictionary that maps the phrases to their true scores
+
+    This function gives us a number that tells us whether the model
+    a) over-guesses
+    b) under-guesses
+    c) evenly over- and under-guesses
+    
+    Returns the ratio of predictions that were over-guesses
+    to the number of total incorrect predictions
+    = (number of over-guesses) / (number of wrong predictions_)
+    """
+    # initialize the numerator and denominators
+    over_guesses = 0.0
+    total_wrong = 0.0
+    
+    # compare with the actual values
+    for phrase in predicted_scores:
+        # check if our prediction was correct or not
+        if predicted_scores[phrase] != int(full_mapping_dict[phrase]):
+            total_wrong += 1
+            
+            # did we over- or under-guess?
+            if predicted_scores[phrase] > int(full_mapping_dict[phrase]):
+                over_guesses += 1
+            
+    # return the ratio of over-guesses to incrorrect predictions    
+    return over_guesses / total_wrong
+    
+    
+    
+def computeWeightedScore(list_scores, list_phrase_lengths):
+    """
+    Takes in a list of matched scores
+    as well as a corresponding list of phrase lengths
+    that all represent some part of a single phrase
+    
+    Computes a single weighted score
+    """
+    # first, check to make sure both the input lists are of same length
+    # if this is not the case, there is an issue
+    if len(list_scores) != len(list_phrase_lengths):
+        print 'Input lists of different size'
+        sys.exit()
+        
+    # compute the weighted, non-normalized scores
+    weightings = np.exp(list_phrase_lengths)
+    weighted_scores = np.multiply(list_scores, weightings)
+    
+    # normalize
+    normalized_total = float(np.sum(weightings))
+    weighted_scores = weighted_scores / normalized_total
+    
+    # return the weighted score
+    return int(round(np.sum(weighted_scores)))
+    
+    
 def commandLineIntake():
     """
     Parses arguments, if any, from the command line
     """
     # take in arguments
     parser = argparse.ArgumentParser()
-    parser.add_argument("-method",
-                        help = "1 (unweighted avgs) or 2 (weighted)",
-                        type = int)
     parser.add_argument("-neutrals",
                         help = "remove/keep neutrals",
                         type = str)
@@ -158,17 +226,12 @@ def commandLineIntake():
     args = parser.parse_args()
                         
     # initialize defaults
-    # method
-    weight_scoring = False
     # neutrals
     rm_neutrals = False
     # iterations
     iterations = 10.0
     # holdout set size, as a fraction
     holdout_size = 0.1
-    
-    if args.method == 2:
-        weight_scoring = True
         
     if args.neutrals:
         if args.neutrals.lower() == 'remove':
@@ -181,4 +244,4 @@ def commandLineIntake():
         if args.holdout > 0 and args.holdout < 1:
             holdout_size = args.holdout
             
-    return weight_scoring, rm_neutrals, iterations, holdout_size
+    return rm_neutrals, iterations, holdout_size

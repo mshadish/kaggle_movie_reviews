@@ -26,6 +26,8 @@ from utils import testPhraseSplit
 from utils import computeAccuracy
 from utils import splitTrainHoldout
 from utils import commandLineIntake
+from utils import computeOverPredict
+from utils import computeWeightedScore
 
     
     
@@ -71,62 +73,14 @@ def joinWithMapping(mapping_dict, possible_phrases):
     # end loops
     return_dict = {key: mapping_dict[key] for key in match_dict}
     return return_dict
-
     
-    
-def method1(mapping_dict, holdout_set, remove_neutrals = False):
-    """
-    Method 1:
-    Average all of the scores from the matched sub-phrases
-    for a given phrase from our holdout set
-    
-    Straight average, no weights applied
-    
-    Results: Can achieve approximately 56% to 59% accuracy
-    Increases to 60% accuracy if we simply remove all of the neutral phrases
-    """
-    # we will store our results in a dictionary
-    predicted_scores = {}
-    
-    for phrase in holdout_set:
-        
-        # split into all possible phrases
-        sub_phrases = testPhraseSplit(phrase)
-        
-        # join with the mapping dictionary
-        matches = joinWithMapping(mapping_dict, sub_phrases)
-        
-        # if we want to remove neutrals, do so here
-        if remove_neutrals:
-            matches = {key: float(matches[key]) for key in matches
-                        if int(matches[key]) != 2}
-        
-        # if nothing is matched, default assignment is a neutral score
-        if len(matches) == 0:
-            predicted_scores[phrase] = 2
-            continue
-        
-        # otherwise, compute the unweighted average
-        scores = [float(num) for num in matches.values()]
-        
-        # and add to our scoring dictionary
-        predicted_scores[phrase] = int(round(np.mean(scores)))
-        
-        """
-        # to keep track of progress
-        count += 1
-        print 'completed: ' + str(count)
-        """
-                
-    return predicted_scores
     
     
 def method2(mapping_dict, holdout_set, remove_neutrals = False):
     """
     Method 2:
     Compute a weighted average score for each phrase
-    Weightings are calculated based on sub-phrase length
-    compared to the length of the entire phrase
+    Weightings are calculated on a non-linear scale based on the phrase length
     
     Also around 60% accuracy when we remove neutrals
     """
@@ -150,89 +104,96 @@ def method2(mapping_dict, holdout_set, remove_neutrals = False):
         if len(matches) == 0:
             predicted_scores[phrase] = 0
             continue
-                
-        # bag of matched phrases
-        bag_of_matches = ' '.join(matches.keys())
-        bag_size = float(len(re.split(r'\s', bag_of_matches)))
-        
+
         # otherwise, compute the weighted scores
         scores = []
+        phrase_lengths = []
         for matched_phrase in matches:
+            # grab the score for the phrase
+            num = float(matches[matched_phrase])
+            # and add it to our list of scores
+            scores.append(num)
             
             # compute the length of our matched phrase
             matched_phrase_length = float(len(re.split(r'\s', matched_phrase)))
+            # store it in a list, we will reference it after looping
+            # to assist with re-normalization after weighting
+            phrase_lengths.append(matched_phrase_length)
             
-            # grab the score for the phrase
-            num = float(matches[matched_phrase])
-
-            # weight it
-            num = num * matched_phrase_length / bag_size
-            
-            # add it to our list of scores
-            scores.append(num)
+        # end loop through matched phrases
+        
+        # compute the weighted score
+        weighted_score = computeWeightedScore(scores, phrase_lengths)
         
         # and add our weighted average to the scoring dictionary
-        predicted_scores[phrase] = int(round(np.sum(scores)))
+        predicted_scores[phrase] = weighted_score
         
-        """
-        # to keep track of progress
-        count += 1
-        print 'completed: ' + str(count)
-        """
+    # end loop through holdout set
                 
     return predicted_scores
 
     
     
-def testingWrapper(full_map_dict, size, weighted_scores = False,
-                   remove_neutrals = False):
+def testingWrapper(full_map_dict, size, remove_neutrals = False):
     """
     Runs a single iteration of
     1. generating a holdout set
     2. computing the model prediction score on the holdout set
     """
-    # if we're using weighted scoring, we must convert the dict values
+    # we will convert the dict values
     # from strings to floats
-    if weighted_scores:
-        full_map_dict = {i: int(full_map_dict[i]) - 2 for i in full_map_dict}
+    # will also set the neutral to 0 for ease of understandability
+    full_map_dict = {i: int(full_map_dict[i]) - 2 for i in full_map_dict}
 
+    # generate the holdout set
     holdout_set, mapping_minus_holdout = splitTrainHoldout(full_map_dict, size)
-    predictions = None
-    if weighted_scores:
-        predictions = method2(mapping_minus_holdout, holdout_set,
-                              remove_neutrals)
-    else:
-        predictions = method1(mapping_minus_holdout, holdout_set,
-                              remove_neutrals)
+    
+    # make predictions, using the user-specified model
+    predictions = method2(mapping_minus_holdout, holdout_set, remove_neutrals)
+                              
+    # compute the accuracy of our model
     accuracy = computeAccuracy(predictions, full_map_dict)
     
-    return accuracy
+    # compute the number of over-guesses
+    over_guesses = computeOverPredict(predictions, full_map_dict)
+    
+    return accuracy, over_guesses
     
 
     
 def main():
     
-    weight_scoring, rm_neutrals, iterations, holdout_size = commandLineIntake()
+    rm_neutrals, iterations, holdout_size = commandLineIntake()
+    if rm_neutrals:
+        print 'Removing neutrals'
     full_map_dict = tsvRead('train.tsv')
     
     now = time.time()
     iter_count = 0
     model_scores = []
+    over_guess_ratios = []
     
     # loop to compute average accuracies
     for i in xrange(int(iterations)):
-        model_scores.append(testingWrapper(full_map_dict,
+        score, over_guess = testingWrapper(full_map_dict,
                                            size = holdout_size,
-                                           weighted_scores = weight_scoring,
-                                           remove_neutrals = rm_neutrals))
+                                           remove_neutrals = rm_neutrals)
+        
+        # keep track of this run's model score and over-guess ratio
+        model_scores.append(score)
+        over_guess_ratios.append(over_guess)
+        
+        # increment our counter, report to the console
         iter_count += 1
         print 'finished iteration ' + str(iter_count)
+        print 'running average: %f' % np.mean(model_scores)
     # end loop
 
-    
-    print 'model average over ' + str(iter_count) + ' iterations'
-    print str(np.mean(model_scores))
-    print 'average time per run: ' + str((time.time() - now)/iterations)
+    # report on the results of this model
+    print 'model average over %d iterations: %f' % (iter_count,
+                                                    np.mean(model_scores))
+    print 'over-guesses to total errors: %f' % np.mean(over_guess_ratios)
+    print 'average time per run: %f' % ((time.time() - now)/iterations)
     return None
     
     
