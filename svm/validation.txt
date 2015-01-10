@@ -1,0 +1,240 @@
+Starting L1 C=0.010000
+Accuracy: 0.582917
+Accuracy: 0.580674
+Accuracy: 0.574811
+Accuracy: 0.576605
+Accuracy: 0.573081
+Average accuracy of 0.010000: 0.577618
+
+Starting L1 C=0.016379
+Accuracy: 0.590478
+Accuracy: 0.592272
+Accuracy: 0.592625
+Accuracy: 0.594130
+Accuracy: 0.597430
+Average accuracy of 0.016379: 0.593387
+
+Starting L1 C=0.026827
+Accuracy: 0.601756
+Accuracy: 0.607363
+Accuracy: 0.601788
+Accuracy: 0.601307
+Accuracy: 0.607363
+Average accuracy of 0.026827: 0.603915
+
+Starting L1 C=0.043940
+Accuracy: 0.623382
+Accuracy: 0.617583
+Accuracy: 0.622421
+Accuracy: 0.623734
+Accuracy: 0.625561
+Average accuracy of 0.043940: 0.622536
+
+Starting L1 C=0.071969
+Accuracy: 0.639498
+Accuracy: 0.640235
+Accuracy: 0.635813
+Accuracy: 0.639049
+Accuracy: 0.635012
+Average accuracy of 0.071969: 0.637921
+
+Starting L1 C=0.117877
+Accuracy: 0.644784
+Accuracy: 0.647187
+Accuracy: 0.652025
+Accuracy: 0.642381
+Accuracy: 0.650455
+Average accuracy of 0.117877: 0.647366
+
+Starting L1 C=0.193070
+Accuracy: 0.658272
+Accuracy: 0.654844
+Accuracy: 0.662886
+Accuracy: 0.655709
+Accuracy: 0.662277
+Average accuracy of 0.193070: 0.658798
+
+Starting L1 C=0.316228
+Accuracy: 0.667147
+Accuracy: 0.670672
+Accuracy: 0.667243
+Accuracy: 0.662438
+Accuracy: 0.663943
+Average accuracy of 0.316228: 0.666289
+
+Starting L1 C=0.517947
+Accuracy: 0.675670
+Accuracy: 0.679194
+Accuracy: 0.679322
+Accuracy: 0.677464
+Accuracy: 0.674484
+Average accuracy of 0.517947: 0.677227
+
+Starting L1 C=0.848343
+Accuracy: 0.681373
+Accuracy: 0.679226
+Accuracy: 0.683103
+Accuracy: 0.683968
+Accuracy: 0.682398
+Average accuracy of 0.848343: 0.682013
+
+Starting L1 C=1.389495
+Accuracy: 0.689382
+Accuracy: 0.684512
+Accuracy: 0.693259
+Accuracy: 0.692746
+Accuracy: 0.686723
+Average accuracy of 1.389495: 0.689325
+
+Starting L1 C=2.275846
+Accuracy: 0.694220
+Accuracy: 0.692330
+Accuracy: 0.688421
+Accuracy: 0.687172
+Accuracy: 0.689703
+Average accuracy of 2.275846: 0.690369
+
+Starting L1 C=3.727594
+Accuracy: 0.697584
+Accuracy: 0.696976
+Accuracy: 0.699891
+Accuracy: 0.699026
+Accuracy: 0.696463
+Average accuracy of 3.727594: 0.697988
+
+Starting L1 C=6.105402
+Accuracy: 0.695309
+Accuracy: 0.692875
+Accuracy: 0.694348
+Accuracy: 0.698545
+Accuracy: 0.692394
+Average accuracy of 6.105402: 0.694694
+
+Starting L1 C=10.000000
+Accuracy: 0.698513
+Accuracy: 0.695245
+Accuracy: 0.706011
+Accuracy: 0.697584
+Accuracy: 0.700211
+Average accuracy of 10.000000: 0.699513
+
+Starting L2 C=0.010000
+Accuracy: 0.623350
+Accuracy: 0.626618
+Accuracy: 0.623510
+Accuracy: 0.622933
+Accuracy: 0.625497
+Average accuracy of 0.010000: 0.624382
+
+Starting L2 C=0.016379
+Accuracy: 0.639722
+Accuracy: 0.636326
+Accuracy: 0.636614
+Accuracy: 0.640907
+Accuracy: 0.637543
+Average accuracy of 0.016379: 0.638222
+
+Starting L2 C=0.026827
+Accuracy: 0.652377
+Accuracy: 0.654460
+Accuracy: 0.653114
+Accuracy: 0.656446
+Accuracy: 0.653370
+Average accuracy of 0.026827: 0.653954
+
+Starting L2 C=0.043940
+Accuracy: 0.666154
+Accuracy: 0.666442
+Accuracy: 0.660932
+Accuracy: 0.665962
+Accuracy: 0.665609
+Average accuracy of 0.043940: 0.665020
+
+Starting L2 C=0.071969
+Accuracy: 0.674292
+Accuracy: 0.673587
+Accuracy: 0.676086
+Accuracy: 0.674452
+Accuracy: 0.674997
+Average accuracy of 0.071969: 0.674683
+
+Starting L2 C=0.117877
+Accuracy: 0.683039
+Accuracy: 0.681501
+Accuracy: 0.678585
+Accuracy: 0.680315
+Accuracy: 0.680251
+Average accuracy of 0.117877: 0.680738
+
+Starting L2 C=0.193070
+Accuracy: 0.685762
+Accuracy: 0.689126
+Accuracy: 0.691401
+Accuracy: 0.691209
+Accuracy: 0.689382
+Average accuracy of 0.193070: 0.689376
+
+Starting L2 C=0.316228
+Accuracy: 0.693611
+Accuracy: 0.690343
+Accuracy: 0.693804
+Accuracy: 0.690824
+Accuracy: 0.692618
+Average accuracy of 0.316228: 0.692240
+
+Starting L2 C=0.517947
+Accuracy: 0.694060
+Accuracy: 0.690343
+Accuracy: 0.700083
+Accuracy: 0.690215
+Accuracy: 0.692971
+Average accuracy of 0.517947: 0.693535
+
+Starting L2 C=0.848343
+Accuracy: 0.695982
+Accuracy: 0.703576
+Accuracy: 0.699122
+Accuracy: 0.697008
+Accuracy: 0.693387
+Average accuracy of 0.848343: 0.697815
+
+Starting L2 C=1.389495
+Accuracy: 0.701974
+Accuracy: 0.698385
+Accuracy: 0.700211
+Accuracy: 0.699571
+Accuracy: 0.695213
+Average accuracy of 1.389495: 0.699071
+
+Starting L2 C=2.275846
+Accuracy: 0.701749
+Accuracy: 0.699539
+Accuracy: 0.698962
+Accuracy: 0.703255
+Accuracy: 0.702262
+Average accuracy of 2.275846: 0.701153
+
+Starting L2 C=3.727594
+Accuracy: 0.702198
+Accuracy: 0.705754
+Accuracy: 0.698802
+Accuracy: 0.696303
+Accuracy: 0.699154
+Average accuracy of 3.727594: 0.700442
+
+Starting L2 C=6.105402
+Accuracy: 0.703191
+Accuracy: 0.703031
+Accuracy: 0.696911
+Accuracy: 0.698001
+Accuracy: 0.704152
+Average accuracy of 6.105402: 0.701057
+
+Starting L2 C=10.000000
+Accuracy: 0.704441
+Accuracy: 0.698738
+Accuracy: 0.702006
+Accuracy: 0.702582
+Accuracy: 0.694893
+Average accuracy of 10.000000: 0.700532
+
