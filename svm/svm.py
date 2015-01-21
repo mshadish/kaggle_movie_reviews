@@ -153,7 +153,7 @@ def runLearningCurve(learning_space = np.linspace(start=0.05,stop=1.0,num=11),
     return None
     
     
-def validationLoops(raw_x, raw_y, c_space, loss_func, train_size):
+def validationLoops(raw_x, raw_y, c_space, loss_func, train_size, num_folds):
     """
     Runs through the different C's in the c-space for a given loss function
     and plots the validation curve
@@ -176,7 +176,7 @@ def validationLoops(raw_x, raw_y, c_space, loss_func, train_size):
         vec = CountVectorizer()
         
         # run 5-fold cross-validation
-        kfolds = KFold(n = len(x), n_folds = 5, shuffle = True)
+        kfolds = KFold(n = len(x), n_folds = num_folds, shuffle = True)
         train_accuracies = []
         test_accuracies = []
         for train_idx, test_idx in kfolds:
@@ -213,15 +213,19 @@ def validationLoops(raw_x, raw_y, c_space, loss_func, train_size):
         train_scores.append(np.mean(train_accuracies))
         test_scores.append(np.mean(test_accuracies))
     # end loop through parameter C space
+    
+    # compute cross-validation training size
+    cv_train_size = int(round(train_size * (num_folds - 1.0) / num_folds))
+    # plot and return
     plotValidationCurve(c_space, train_scores, test_scores,
-                        'SVM ' + loss_func + ' ' + str(train_size))
+                        'SVM ' + loss_func + ' ' + str(cv_train_size))
     return None
     
     
 
 def runValidationCurve(train_perc = 1.0,
                        c_space = np.logspace(-2, 2, num = 16),
-                       l1 = True, l2 = True):
+                       l1 = True, l2 = True, num_folds = 5):
     """
     Wrapper function to run validation curve for SVM
     for balanced dataset with maximal-size training set
@@ -240,10 +244,10 @@ def runValidationCurve(train_perc = 1.0,
     
     # run for l1 loss function
     if l1:
-        validationLoops(raw_x, raw_y, c_space, 'l1', train_size)
+        validationLoops(raw_x, raw_y, c_space, 'l1', train_size, num_folds)
     # repeat for l2 loss function
     if l2:
-        validationLoops(raw_x, raw_y, c_space, 'l2', train_size)
+        validationLoops(raw_x, raw_y, c_space, 'l2', train_size, num_folds)
     
     return None
     
@@ -295,7 +299,10 @@ def createSubmissionFile(train_perc = 1.0, loss_function = 'l2', c = 14):
         train_perc = 1.0
     train_size = int(round(len(raw_x) * train_perc))
     # rebalance the data
-    x, y = rebalanceSample(raw_x, raw_y, sample_size = train_size)
+    #x, y = rebalanceSample(raw_x, raw_y, sample_size = train_size)
+    # try without rebalancing
+    x = raw_x
+    y = raw_y
     # vectorize the training data with a word vectorizer
     vec = CountVectorizer()
     x_train = vec.fit_transform(x)
@@ -309,7 +316,7 @@ def createSubmissionFile(train_perc = 1.0, loss_function = 'l2', c = 14):
     # run our predictions
     submission_df = predictOnTest(input_model = model, word_vectorizer = vec)
     # and write it to a csv
-    submission_df.to_csv('solutions.csv', index = False)
+    submission_df.to_csv('solutions2.csv', index = False)
     return None
     
 
