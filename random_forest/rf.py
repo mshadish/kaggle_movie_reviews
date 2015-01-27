@@ -61,7 +61,7 @@ def learningLoops(input_model, raw_x, raw_y, learning_space, rebalance = True):
     for train_perc in learning_space:
         # extrapolate the training size
         # note: we multiply by 0.8 because we do 5-fold cross-validation
-        train_size = round(len(raw_x) * train_perc * 0.8)
+        train_size = round(len(raw_x) * train_perc * 0.67)
         print 'Starting %f Balanced' % train_size
         
         # now extract out x and y
@@ -83,7 +83,7 @@ def learningLoops(input_model, raw_x, raw_y, learning_space, rebalance = True):
         vec = CountVectorizer()
         
         # run 5-fold cross-validation
-        kfolds = KFold(n = len(x), n_folds = 5, shuffle = True)
+        kfolds = KFold(n = len(x), n_folds = 3, shuffle = True)
         train_accuracies = []
         test_accuracies = []
         for train_idx, test_idx in kfolds:
@@ -176,7 +176,10 @@ def validationLoops(raw_x,raw_y,param_name,param_space,train_size,num_folds):
         #                               oob_score = True)
         model = RandomForestClassifier(n_estimators = p, n_jobs = num_cores)
         # initialize our x and y
-        x, y = rebalanceSample(raw_x, raw_y, sample_size = train_size)
+        #x, y = rebalanceSample(raw_x, raw_y, sample_size = train_size)
+        sample_idx = random.sample(np.arange(len(raw_x)), train_size)
+        x = np.asarray([raw_x[i] for i in sample_idx])
+        y = np.asarray([raw_y[i] for i in sample_idx])
         
         # initialize the word vectorizer
         vec = CountVectorizer()
@@ -189,9 +192,11 @@ def validationLoops(raw_x,raw_y,param_name,param_space,train_size,num_folds):
             # grab training data
             x_train = x[train_idx]
             y_train = y[train_idx]
+            # rebalance
+            x_train, y_train = rebalanceSample(x_train, y_train)
             # grab testing data
-            x_test = x[test_idx]
-            y_test = y[test_idx]
+            x_test = raw_x[test_idx]
+            y_test = raw_y[test_idx]
             
             # now vectorize our training and testing x
             x_train = vec.fit_transform(x_train)
@@ -248,7 +253,7 @@ def runValidationCurve(train_perc = 1.0, param_name = 'Unspec',
     # compute the training size
     if train_perc > 1.0 or train_perc <= 0.0:
         train_perc = 1.0
-    train_size = train_perc * len(raw_x)
+    train_size = int(round(train_perc * len(raw_x)))
     
     # generate validation curve
     validationLoops(raw_x,raw_y,param_name, param_space, train_size, num_folds)
@@ -281,9 +286,9 @@ def predictOnTest(input_model, word_vectorizer, test_file = 'test.tsv'):
     
     
     
-def createSubmissionFile(train_perc = 1.0, loss_function = 'l2', c = 14):
+def createSubmissionFile(input_model, train_perc = 1.0):
     """
-    Runs SVM with the specified parameters
+    Runs an input model with a specified training percentage size
     and writes out a CSV of the form:
     PhraseId,Sentiment
     156061,2
@@ -303,33 +308,33 @@ def createSubmissionFile(train_perc = 1.0, loss_function = 'l2', c = 14):
         train_perc = 1.0
     train_size = int(round(len(raw_x) * train_perc))
     # rebalance the data
-    #x, y = rebalanceSample(raw_x, raw_y, sample_size = train_size)
+    x, y = rebalanceSample(raw_x, raw_y, sample_size = train_size)
     # try without rebalancing
-    x = raw_x
-    y = raw_y
+    #x = raw_x
+    #y = raw_y
     # vectorize the training data with a word vectorizer
     vec = CountVectorizer()
     x_train = vec.fit_transform(x)
     x_train = x_train.toarray()
     
-    # build the model
-    model = svm.LinearSVC(C = c, loss = loss_function)
     # fit the model
-    model.fit(x_train, y)
+    input_model.fit(x_train, y)
     
     # run our predictions
-    submission_df = predictOnTest(input_model = model, word_vectorizer = vec)
+    submission_df = predictOnTest(input_model = input_model,
+                                  word_vectorizer = vec)
     # and write it to a csv
-    submission_df.to_csv('solutions2.csv', index = False)
+    submission_df.to_csv('solutions.csv', index = False)
     return None
     
 
 
 def main():
-    #runLearningCurve()
-    runValidationCurve(train_perc = 1.0, param_name = 'N Trees',
-                       param_space = [50, 100, 250, 500])
-    #createSubmissionFile()
+    #runLearningCurve(balanced = False)
+    #runValidationCurve(train_perc = 1.0, param_name = 'N Trees',
+    #                   param_space = [100], num_folds = 3)
+    model = RandomForestClassifier(n_estimators = 100, n_jobs = num_cores)
+    createSubmissionFile(input_model = model)
     return None
     
     
