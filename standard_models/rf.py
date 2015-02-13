@@ -39,10 +39,10 @@ def validationLoops(raw_x,raw_y,param_name,param_space,train_size,num_folds):
     test_scores = []
     # loop through the different sets of training sizes
     for p in param_space:
+        
         print 'Starting parameter %f' % p
+        
         # initialize the model
-        #model = RandomForestClassifier(n_estimators = p, n_jobs = num_cores,
-        #                               oob_score = True)
         model = RandomForestClassifier(n_estimators = p, n_jobs = num_cores)
         # initialize our x and y
         #x, y = rebalanceSample(raw_x, raw_y, sample_size = train_size)
@@ -74,7 +74,6 @@ def validationLoops(raw_x,raw_y,param_name,param_space,train_size,num_folds):
             
             # now we are ready to train the model
             model.fit(x_train, y_train)
-            #print model.oob_score_
             # generate predictions for training and test sets
             train_predictions = model.predict(x_train)
             test_predictions = model.predict(x_test)
@@ -93,7 +92,7 @@ def validationLoops(raw_x,raw_y,param_name,param_space,train_size,num_folds):
         params.append(p)
         train_scores.append(np.mean(train_accuracies))
         test_scores.append(np.mean(test_accuracies))
-    # end loop through parameter C space
+    # repeat for every parameter in the given parameter space
     
     # compute cross-validation training size
     cv_train_size = int(round(train_size * (num_folds - 1.0) / num_folds))
@@ -136,8 +135,7 @@ def main():
     
     # now run it through our tests
     runLearningCurve(model = rf_model, balanced = False)
-    #runValidationCurve(train_perc = 1.0, param_name = 'N Trees',
-    #                   param_space = [100], num_folds = 3)
+    #runValidationCurve(param_name = 'N Trees', param_space = [100])
     createSubmissionFile(input_model = rf_model)
     return None
     
