@@ -1,14 +1,12 @@
-# -*- coding: utf-8 -*-
+__author__ = 'mshadish'
 """
-Created on Sat Oct 25 10:33:06 2014
-
-@author: mshadish
-
 This is called via the command line as follows
 > python phrase_mapping.py -method (1 or 2) -neutrals (remove?)
 ...-iter (how many iterations, e.g. 10) -holdout (between 0 and 1)
 
 Method 1: Unweighted scores used to compute phrase sentiment
+    - note: this has been deprecated, did not yield reliable results
+    
 Method 2: Weighted scores used to compute phrase sentiment
 
 This script defines several functions in order to
@@ -16,8 +14,12 @@ This script defines several functions in order to
 2. Break apart each incoming test phrase into all of its possible sub-phrases
 3. Match these sub-phrases to our mapping table
 4. Compute a sentiment score for the given test phrase
-"""
 
+Note: this script can be thought of as an exercise in Python,
+as much of the functionality defined here can be replicated
+via a few function calls from pandas or scikit-learn
+"""
+# imports
 import re
 import sys
 import time
@@ -80,6 +82,7 @@ def splitTrainHoldout(full_mapping_dict, split_fraction = 0.1):
         del mapping_dict[phrase]
         
     return holdout_set, mapping_dict
+    
     
     
 def joinWithMapping(mapping_dict, possible_phrases):
@@ -154,7 +157,7 @@ def computeWeightedScore(list_scores, list_phrase_lengths):
     
     
     
-def method2(mapping_dict, holdout_set, remove_neutrals = False):
+def runPredictions(mapping_dict, holdout_set, remove_neutrals = False):
     """
     Method 2:
     Compute a weighted average score for each phrase
@@ -206,8 +209,7 @@ def method2(mapping_dict, holdout_set, remove_neutrals = False):
         # and add our weighted average to the scoring dictionary
         predicted_scores[phrase] = weighted_score
         
-    # end loop through holdout set
-                
+    # repeat for every phrase in the holdout set
     return predicted_scores
     
     
@@ -242,14 +244,14 @@ def testingWrapper(full_map_dict, size, remove_neutrals = False):
     """
     # we will convert the dict values
     # from strings to floats
-    # will also set the neutral to 0 for ease of understandability
+    # will also set the neutral to 0 for ease of understanding
     full_map_dict = {i: int(full_map_dict[i]) - 2 for i in full_map_dict}
 
     # generate the holdout set
     holdout_set, mapping_minus_holdout = splitTrainHoldout(full_map_dict, size)
     
     # make predictions, using the user-specified model
-    predictions = method2(mapping_minus_holdout, holdout_set, remove_neutrals)
+    predictions = runPredictions(mapping_minus_holdout, holdout_set, remove_neutrals)
                               
     # compute the accuracy of our model
     accuracy = computeAccuracy(predictions, full_map_dict)
@@ -302,7 +304,9 @@ def commandLineIntake():
 
     
 def main():
-    
+    """
+    Main wrapper function to build and test the model
+    """
     rm_neutrals, iterations, holdout_size = commandLineIntake()
     if rm_neutrals:
         print 'Removing neutrals'
@@ -327,7 +331,7 @@ def main():
         iter_count += 1
         print 'finished iteration ' + str(iter_count)
         print 'running average: %f' % np.mean(model_scores)
-    # end loop
+    # repeat for however many specified iterations
 
     # report on the results of this model
     print 'model average over %d iterations: %f' % (iter_count,

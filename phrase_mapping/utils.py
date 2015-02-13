@@ -1,4 +1,4 @@
-_author_ = 'mshadish'
+__author__ = 'mshadish'
 """
 This script defines several utility functions, with the idea that
 these utility functions can be useful not only for other models in this

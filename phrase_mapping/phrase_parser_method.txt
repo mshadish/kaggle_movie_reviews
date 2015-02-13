@@ -8,9 +8,9 @@ Linearly-weighted, neutrals removed: 60.4%
 The idea is to use the training data as a mapping table
 where each phrase and sub-phrase is matched to a certain score.
 
-For each phrase in our test set, we will first break it apart into sub-phrases
+For each phrase in our test-set, we will break each out into dynamic n-grams
 and match these sub-phrases to our mapping table.
-This will (ideally) result in a whole bunch of matched sub-phrases,
+This will (ideally) result in a whole bunch of matched n-grams,
 each one with a corresponding sentiment score from our mapping table.
 
 Take a weighted average of all of these scores
